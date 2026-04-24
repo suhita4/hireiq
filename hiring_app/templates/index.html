@@ -547,6 +547,125 @@
       margin-top: 10px;
       line-height: 1.5;
     }
+
+    /* ── Architecture diagram ── */
+    .arch-section {
+      margin-bottom: 32px;
+    }
+
+    .arch-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.2s;
+    }
+
+    .arch-toggle:hover { border-color: rgba(79,142,247,0.35); }
+
+    .arch-toggle-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .arch-toggle-icon {
+      font-size: 11px;
+      color: var(--muted);
+      transition: transform 0.25s;
+    }
+
+    .arch-toggle-icon.open { transform: rotate(180deg); }
+
+    .arch-body {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 24px 28px;
+    }
+
+    .arch-body.open { display: block; }
+
+    .arch-pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .arch-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .arch-node-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .arch-node-box.highlight {
+      border-color: rgba(79,142,247,0.4);
+      background: rgba(79,142,247,0.07);
+      color: var(--accent);
+    }
+
+    .arch-node-sub {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .arch-arrow {
+      font-size: 16px;
+      color: var(--muted);
+      padding: 0 6px;
+      margin-bottom: 18px;
+      flex-shrink: 0;
+    }
+
+    .arch-weights {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .arch-weight-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .arch-weight-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -559,6 +678,64 @@
         <div class="header-badge">spaCy NER · Phase 3</div>
       </div>
     </header>
+
+    <!-- Architecture diagram (collapsible) -->
+    <div class="arch-section">
+      <div class="arch-toggle" onclick="toggleArch(this)">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <span class="arch-toggle-label">How it works</span>
+        <span class="arch-toggle-icon" id="arch-icon">▼</span>
+      </div>
+      <div class="arch-body" id="arch-body">
+        <div class="arch-pipeline">
+          <div class="arch-node">
+            <div class="arch-node-box">Job Description</div>
+            <div class="arch-node-sub">Plain text input</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-node-box highlight">Flask API</div>
+            <div class="arch-node-sub">POST /recommend</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-node-box highlight">NER Extraction</div>
+            <div class="arch-node-sub">spaCy entity recognition</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-node-box highlight">TF-IDF Scoring</div>
+            <div class="arch-node-sub">Skills · Title · Exp</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-node-box highlight">Blended Ranking</div>
+            <div class="arch-node-sub">Weighted total score</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <div class="arch-node-box">UI Results</div>
+            <div class="arch-node-sub">Ranked candidates</div>
+          </div>
+        </div>
+        <div class="arch-weights">
+          <div class="arch-weight-item">
+            <div class="arch-weight-dot" style="background: var(--accent)"></div>
+            Skills match — <strong style="color:var(--accent)">60%</strong>
+          </div>
+          <div class="arch-weight-item">
+            <div class="arch-weight-dot" style="background: var(--accent2)"></div>
+            Title match — <strong style="color:var(--accent2)">25%</strong>
+          </div>
+          <div class="arch-weight-item">
+            <div class="arch-weight-dot" style="background: var(--green)"></div>
+            Experience level — <strong style="color:var(--green)">15%</strong>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="main-grid">
 
@@ -673,6 +850,13 @@
   </div><!-- end container -->
 
   <script>
+    function toggleArch(btn) {
+      const body = document.getElementById('arch-body');
+      const icon = document.getElementById('arch-icon');
+      const open = body.classList.toggle('open');
+      icon.classList.toggle('open', open);
+    }
+
     async function runMatch() {
       const jd = document.getElementById('job-input').value.trim();
       const topN = parseInt(document.getElementById('top-n').value);

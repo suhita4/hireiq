@@ -1,0 +1,5 @@
+flask
+spacy
+pandas
+scikit-learn
+pytest

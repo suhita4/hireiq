@@ -37,30 +37,96 @@ except OSError:
 # ─────────────────────────────────────────────
 SKILL_KEYWORDS = [
     # Programming languages
-    "python", "java", "javascript", "typescript", "c++", "c#", "r", "scala", "go", "rust",
+    "python", "java", "javascript", "typescript", "c++", "c#", "php", "swift",
+    "kotlin", "ruby", "scala", "matlab", "perl", "bash", "shell", "vba",
     # ML / AI
-    "tensorflow", "pytorch", "keras", "scikit-learn", "hugging face", "bert", "gpt",
     "machine learning", "deep learning", "nlp", "natural language processing",
-    "computer vision", "reinforcement learning", "spacy",
-    # Data
-    "sql", "nosql", "mongodb", "postgresql", "mysql", "pandas", "numpy", "tableau",
-    "power bi", "excel", "spark", "hadoop",
+    "computer vision", "reinforcement learning", "tensorflow", "pytorch", "keras",
+    "scikit-learn", "xgboost", "lightgbm", "spacy", "nltk", "bert", "gpt", "llm",
+    "random forest", "regression", "classification", "clustering",
+    "neural network", "hugging face", "opencv",
+    # Data science libraries
+    "pandas", "numpy", "scipy", "matplotlib", "seaborn", "plotly",
+    # Databases
+    "sql", "mysql", "postgresql", "mongodb", "oracle", "sqlite", "redis",
+    "cassandra", "elasticsearch", "snowflake", "bigquery", "nosql",
+    # Big data
+    "spark", "hadoop", "hive", "kafka", "airflow", "databricks",
+    # Visualisation / BI
+    "tableau", "power bi", "excel", "looker",
     # Web / Cloud
-    "react", "node.js", "flask", "django", "fastapi", "spring boot",
-    "aws", "azure", "gcp", "docker", "kubernetes", "terraform", "ci/cd",
-    # Soft skills
-    "communication", "leadership", "teamwork", "problem solving", "agile", "scrum",
-    # Tools
-    "git", "jira", "confluence", "figma", "adobe xd",
+    "html", "css", "react", "angular", "vue", "bootstrap", "node.js",
+    "flask", "django", "fastapi", "spring boot", ".net",
+    "aws", "azure", "gcp", "docker", "kubernetes", "terraform", "ansible",
+    "jenkins", "ci/cd", "git", "rest api", "graphql", "microservices",
+    "xml", "json", "sharepoint",
+    # Testing / QA
+    "selenium", "appium", "junit", "pytest", "testng", "qa",
+    "quality assurance", "automation testing", "manual testing",
+    "jira", "postman",
+    # Infra / Security / Networking
+    "linux", "unix", "windows server", "networking", "firewall", "dns",
+    # ERP / Accounting tools
+    "sap", "erp", "tally", "quickbooks",
+    # Finance domain
+    "accounting", "financial reporting", "auditing", "budgeting",
+    "forecasting", "financial modeling", "investment", "taxation",
+    # HR / Business
+    "recruitment", "talent acquisition", "payroll", "onboarding",
+    "performance management", "hris", "crm", "salesforce",
+    # Design
+    "figma", "adobe xd", "photoshop", "illustrator", "indesign",
+    # Soft / cross-cutting
+    "communication", "leadership", "teamwork", "problem solving",
+    "project management", "agile", "scrum", "data analysis",
+    "business analysis", "microsoft office", "presentation",
+    # Blockchain
+    "blockchain", "ethereum",
 ]
 
 JOB_TITLE_KEYWORDS = [
-    "data scientist", "machine learning engineer", "software engineer", "software developer",
-    "full stack developer", "backend developer", "frontend developer", "devops engineer",
-    "data analyst", "business analyst", "product manager", "project manager",
-    "hr specialist", "hr manager", "ui/ux designer", "product designer",
-    "nlp researcher", "site reliability engineer", "solutions architect",
-    "data engineer", "research scientist",
+    # From dataset frequency analysis
+    "teacher", "professor", "educator",
+    "chef",
+    "public relations",
+    "accountant",
+    "project manager", "project coordinator",
+    "advocate", "lawyer", "legal advisor",
+    "sales manager",
+    "java developer",
+    "operations manager",
+    "mechanical engineer", "civil engineer", "electrical engineer",
+    "business analyst",
+    "software engineer", "software developer",
+    "recruiter",
+    "graphic designer", "web designer",
+    "construction manager",
+    "etl developer",
+    "marketing manager",
+    "devops engineer",
+    "financial analyst",
+    "database administrator",
+    "python developer",
+    "hr manager", "hr specialist",
+    "network engineer", "network security engineer",
+    "hadoop developer",
+    "product manager",
+    "test engineer", "qa engineer", "automation tester",
+    "blockchain developer",
+    "fitness trainer",
+    "data analyst", "data scientist", "data engineer",
+    "web developer", "full stack developer", "backend developer", "frontend developer",
+    "scrum master",
+    "product designer",
+    "copywriter", "content writer",
+    "sap consultant", "sap developer",
+    "solutions architect", "cloud architect",
+    "research scientist",
+    "machine learning engineer",
+    "ui/ux designer",
+    ".net developer",
+    "mobile developer", "android developer", "ios developer",
+    "site reliability engineer",
 ]
 
 EXPERIENCE_PATTERNS = [

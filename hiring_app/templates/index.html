@@ -1013,12 +1013,50 @@
 
     function autofill() {
       const samples = [
-        "Looking for a Senior Python Developer with 5+ years of experience in machine learning and data science. Must know TensorFlow, PyTorch, and scikit-learn. PhD or Master's preferred.",
-        "We need an experienced HR Manager with 7+ years in talent acquisition, onboarding, and employee relations. Strong communication and leadership skills required.",
-        "Hiring a Full Stack Developer with expertise in React, Node.js, and SQL. 3+ years of experience building RESTful APIs and cloud-deployed web applications.",
-        "Seeking a Data Analyst with strong skills in SQL, Tableau, and Excel. Experience in business intelligence and Python for data visualization is a plus.",
-        "Looking for a DevOps Engineer with 4+ years of experience in AWS, Docker, Kubernetes, and CI/CD pipelines. AWS certification preferred.",
-        "We are hiring a UI/UX Designer with proficiency in Figma and Adobe XD. Must have a strong portfolio in mobile and web design. 3+ years of experience.",
+        // Data Science / ML
+        "We are hiring a Data Scientist with 3+ years of experience in machine learning and statistical modeling. Must be proficient in Python, scikit-learn, pandas, and numpy. Experience with TensorFlow or PyTorch is a strong plus. The role involves building classification and regression models, performing feature engineering, and presenting insights to non-technical stakeholders. Master's or PhD in a quantitative field preferred.",
+
+        // Java Developer
+        "Looking for a Senior Java Developer with 5+ years of experience building enterprise-grade applications. Strong knowledge of Spring Boot, REST APIs, and SQL databases required. Experience with microservices architecture, Docker, and Jenkins is expected. The candidate should be comfortable with agile methodologies and code reviews. Bachelor's degree in Computer Science or related field.",
+
+        // HR Manager
+        "We need an experienced HR Manager with 7+ years in talent acquisition, onboarding, payroll, and employee relations. The role requires strong knowledge of HRIS systems, performance management processes, and labour compliance. Excellent communication and leadership skills are essential. Experience managing a team of HR specialists is preferred.",
+
+        // Accountant / Finance
+        "Hiring a qualified Accountant with 4+ years of experience in financial reporting, auditing, and taxation. Proficiency in Tally, QuickBooks, and Excel is required. Knowledge of budgeting, forecasting, and investment analysis is a plus. CPA or equivalent certification preferred. The role involves preparing balance sheets, managing accounts payable/receivable, and ensuring regulatory compliance.",
+
+        // DevOps Engineer
+        "Seeking a DevOps Engineer with 4+ years of experience in AWS, Docker, Kubernetes, and CI/CD pipelines. The candidate should be proficient in Terraform, Ansible, and Jenkins. Strong scripting skills in Bash or Python are required. Experience with Linux systems administration, networking, and monitoring tools is expected. AWS certification is a plus.",
+
+        // Python Developer
+        "Hiring a Python Developer with 3+ years of experience in backend development. Proficiency in Flask or Django, REST APIs, and SQL/NoSQL databases is required. Experience with pandas, numpy, and data pipelines is a strong advantage. The candidate should be comfortable with Git, Docker, and agile workflows. Bachelor's degree in Computer Science preferred.",
+
+        // Testing / QA Engineer
+        "We are looking for a QA Engineer with 3+ years of experience in automation and manual testing. Proficiency in Selenium, pytest, and TestNG is required. The role involves writing test plans, executing regression tests, and reporting bugs via Jira. Experience with API testing using Postman and CI/CD integration is a plus. Strong attention to detail and communication skills required.",
+
+        // Sales Manager
+        "Looking for a Sales Manager with 5+ years of B2B sales experience. The role requires strong CRM skills, business development capabilities, and a proven track record of meeting revenue targets. Excellent presentation, negotiation, and teamwork skills are essential. Experience in the technology or financial services sector is preferred.",
+
+        // Civil / Mechanical Engineer
+        "Hiring a Civil Engineer with 4+ years of experience in construction management and project coordination. Knowledge of AutoCAD, structural design, and site supervision is required. The candidate should have strong problem-solving abilities and experience managing contractors. PMP or equivalent certification is a plus. Bachelor's degree in Civil Engineering required.",
+
+        // Business Analyst
+        "We need a Business Analyst with 3+ years of experience in requirements gathering, process mapping, and stakeholder management. Proficiency in Excel, SQL, and data analysis tools is required. Experience with ERP systems such as SAP is a strong advantage. The role involves working closely with both technical and business teams. Strong communication and presentation skills are essential.",
+
+        // Network Security Engineer
+        "Seeking a Network Security Engineer with 4+ years of experience in firewall management, DNS configuration, and network monitoring. Knowledge of TCP/IP, VPNs, and intrusion detection systems is required. CCNA or CompTIA Security+ certification preferred. The candidate should be comfortable with Linux/Unix environments and security auditing.",
+
+        // Web Designer
+        "Hiring a Web Designer with 3+ years of experience in UI/UX design and front-end development. Proficiency in Figma, HTML, CSS, and Bootstrap is required. Knowledge of JavaScript and responsive design principles is expected. A strong portfolio demonstrating visual design and wireframing skills is essential. Experience with Adobe Photoshop and Illustrator is a plus.",
+
+        // SAP Developer / Consultant
+        "Looking for a SAP Developer with 4+ years of experience in SAP ERP modules. The role requires strong knowledge of SAP ABAP, SAP HANA, and at least one functional module such as SAP MM, SD, or FICO. Experience with system integration, data migration, and user training is expected. SAP certification is preferred.",
+
+        // Healthcare / Medical
+        "We are hiring a Healthcare professional with clinical experience in patient care and hospital administration. Strong knowledge of medical procedures, documentation, and compliance standards is required. Excellent communication and teamwork skills are essential. Experience with electronic health records and quality assurance in a clinical setting is preferred.",
+
+        // Blockchain Developer
+        "Hiring a Blockchain Developer with 3+ years of experience in smart contract development and decentralized applications. Proficiency in Solidity, Ethereum, and Web3.js is required. Experience with blockchain architecture, cryptography fundamentals, and testing frameworks is expected. Bachelor's degree in Computer Science or equivalent practical experience.",
       ];
       const random = samples[Math.floor(Math.random() * samples.length)];
       document.getElementById('job-input').value = random;

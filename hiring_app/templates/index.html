@@ -675,7 +675,7 @@
       <div class="header-inner">
         <div class="logo-mark">H</div>
         <div class="logo-text">Hire<span>IQ</span></div>
-        <div class="header-badge">spaCy NER · Phase 3</div>
+        <div class="header-badge">spaCy NER · Sentence Transformers</div>
       </div>
     </header>
 
@@ -706,8 +706,8 @@
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node">
-            <div class="arch-node-box highlight">TF-IDF Scoring</div>
-            <div class="arch-node-sub">Skills · Title · Exp</div>
+            <div class="arch-node-box highlight">Semantic Scoring</div>
+            <div class="arch-node-sub">NER + BERT Embeddings</div>
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node">
@@ -723,15 +723,15 @@
         <div class="arch-weights">
           <div class="arch-weight-item">
             <div class="arch-weight-dot" style="background: var(--accent)"></div>
-            Skills match — <strong style="color:var(--accent)">60%</strong>
+            NER keyword score — <strong style="color:var(--accent)">50%</strong>
           </div>
           <div class="arch-weight-item">
             <div class="arch-weight-dot" style="background: var(--accent2)"></div>
-            Title match — <strong style="color:var(--accent2)">25%</strong>
+            Semantic embedding — <strong style="color:var(--accent2)">50%</strong>
           </div>
           <div class="arch-weight-item">
-            <div class="arch-weight-dot" style="background: var(--green)"></div>
-            Experience level — <strong style="color:var(--green)">15%</strong>
+            <div class="arch-weight-dot" style="background: var(--muted)"></div>
+            NER split: Skills 60% · Title 25% · Exp 15%
           </div>
         </div>
       </div>
@@ -799,28 +799,23 @@
       <div>
         <div class="loading" id="loading">
           <div class="spinner"></div>
-          <div>Running NER pipeline...</div>
+          <div>Running NER + semantic scoring...</div>
         </div>
 
         <!-- Scoring weights — shown with results -->
         <div id="scoring-info" class="card scoring-card">
           <div class="card-label">Scoring Weights</div>
           <div class="weight-row">
-            <span class="weight-name">Skills match</span>
-            <div class="weight-track"><div class="weight-fill skill" style="width:60%"></div></div>
-            <span class="weight-pct skill">60%</span>
+            <span class="weight-name">NER keyword</span>
+            <div class="weight-track"><div class="weight-fill skill" style="width:50%"></div></div>
+            <span class="weight-pct skill">50%</span>
           </div>
           <div class="weight-row">
-            <span class="weight-name">Title match</span>
-            <div class="weight-track"><div class="weight-fill title" style="width:25%"></div></div>
-            <span class="weight-pct title">25%</span>
+            <span class="weight-name">Semantic (BERT)</span>
+            <div class="weight-track"><div class="weight-fill title" style="width:50%"></div></div>
+            <span class="weight-pct title">50%</span>
           </div>
-          <div class="weight-row">
-            <span class="weight-name">Experience</span>
-            <div class="weight-track"><div class="weight-fill exp" style="width:15%"></div></div>
-            <span class="weight-pct exp">15%</span>
-          </div>
-          <div class="weight-desc">Skills are prioritized at 60% because they directly impact job fit. Title match adds 25% for seniority alignment, experience level 15%.</div>
+          <div class="weight-desc">Final score = 50% NER keyword match (skills 60%, title 25%, exp 15%) + 50% semantic similarity via sentence-transformers (all-MiniLM-L6-v2). Semantic scoring catches synonyms and contextually related terms that exact keyword matching misses.</div>
         </div>
 
         <div id="results-panel" class="card">
@@ -945,10 +940,11 @@
         const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
         const rankLabel = `#${rank}`;
 
-        // Score bar widths (skill max=60, title max=25, exp max=15)
-        const skillPct  = Math.min((c.skill_score / 60) * 100, 100).toFixed(0);
-        const titlePct  = Math.min((c.title_score / 25) * 100, 100).toFixed(0);
-        const expPct    = Math.min((c.experience_score / 15) * 100, 100).toFixed(0);
+        // Score bar widths (skill max=60, title max=25, exp max=15, semantic max=100)
+        const skillPct    = Math.min((c.skill_score / 60) * 100, 100).toFixed(0);
+        const titlePct    = Math.min((c.title_score / 25) * 100, 100).toFixed(0);
+        const expPct      = Math.min((c.experience_score / 15) * 100, 100).toFixed(0);
+        const semanticPct = Math.min(c.semantic_score || 0, 100).toFixed(0);
 
         const matchedSkillsHtml = c.matched_skills.length
           ? c.matched_skills.map(s => `<span class="tag skill">${s}</span>`).join('')
@@ -992,6 +988,11 @@
                 <span class="bar-label">Experience</span>
                 <div class="bar-track"><div class="bar-fill exp" style="width:${expPct}%"></div></div>
                 <span class="bar-val">${c.experience_score}</span>
+              </div>
+              <div class="bar-row">
+                <span class="bar-label" style="color:var(--yellow)">Semantic</span>
+                <div class="bar-track"><div class="bar-fill" style="width:${semanticPct}%;background:var(--yellow)"></div></div>
+                <span class="bar-val">${(c.semantic_score || 0).toFixed(1)}</span>
               </div>
             </div>
 

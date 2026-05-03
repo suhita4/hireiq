@@ -1,0 +1,7 @@
+flask
+spacy
+pandas
+numpy
+sentence-transformers
+tqdm
+matplotlib

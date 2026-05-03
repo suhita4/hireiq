@@ -18,14 +18,17 @@ To add new entity labels: add them to ENTITY_PATTERNS below.
 import spacy
 from spacy.matcher import Matcher
 import pandas as pd
+import numpy as np
 import re
 from collections import defaultdict
 
 # ─────────────────────────────────────────────
-# 1. Load spaCy model
+# 1. Load spaCy model (NER-only — parser/tagger/lemmatizer disabled for speed)
 # ─────────────────────────────────────────────
+_DISABLE_PIPES = ["tagger", "parser", "senter", "attribute_ruler", "lemmatizer"]
+
 try:
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm", disable=_DISABLE_PIPES)
 except OSError:
     raise OSError(
         "spaCy model not found. Run: python -m spacy download en_core_web_sm"
@@ -137,40 +140,41 @@ EXPERIENCE_PATTERNS = [
 ]
 
 # ─────────────────────────────────────────────
-# 3. Entity extraction function
+# 3. Entity extraction functions
 # ─────────────────────────────────────────────
-def extract_entities(text: str) -> dict:
-    """
-    Extract SKILL, JOB_TITLE, and EXPERIENCE entities from text.
-    Returns a dict: { 'SKILL': set(), 'JOB_TITLE': set(), 'EXPERIENCE': set() }
-    """
-    text_lower = text.lower()
+def _keyword_entities(text_lower: str) -> defaultdict:
+    """Pure-Python keyword pass shared by single and batch extraction."""
     entities = defaultdict(set)
-
-    # Extract skills
     for skill in SKILL_KEYWORDS:
         if skill in text_lower:
             entities["SKILL"].add(skill)
-
-    # Extract job titles
     for title in JOB_TITLE_KEYWORDS:
         if title in text_lower:
             entities["JOB_TITLE"].add(title)
-
-    # Extract experience patterns
     for pattern in EXPERIENCE_PATTERNS:
-        matches = re.findall(pattern, text_lower)
-        for match in matches:
+        for match in re.findall(pattern, text_lower):
             entities["EXPERIENCE"].add(match.strip())
+    return entities
 
-    # Also run spaCy NER for additional entity hints (ORG, PERSON etc. ignored,
-    # but GPE/DATE can hint at experience context)
+
+def extract_entities(text: str) -> dict:
+    """Extract SKILL, JOB_TITLE, and EXPERIENCE entities from text."""
+    entities = _keyword_entities(text.lower())
     doc = nlp(text)
     for ent in doc.ents:
         if ent.label_ == "DATE" and "year" in ent.text.lower():
             entities["EXPERIENCE"].add(ent.text.lower().strip())
-
     return {k: list(v) for k, v in entities.items()}
+
+
+def batch_extract_entities(texts: list) -> list:
+    """Batch extraction using nlp.pipe() — ~5x faster than calling extract_entities() in a loop."""
+    keyword_results = [_keyword_entities(t.lower()) for t in texts]
+    for doc, entities in zip(nlp.pipe(texts, batch_size=64), keyword_results):
+        for ent in doc.ents:
+            if ent.label_ == "DATE" and "year" in ent.text.lower():
+                entities["EXPERIENCE"].add(ent.text.lower().strip())
+    return [{k: list(v) for k, v in e.items()} for e in keyword_results]
 
 
 # ─────────────────────────────────────────────
@@ -206,7 +210,26 @@ def compute_match_score(job_entities: dict, candidate_entities: dict) -> dict:
 
 
 # ─────────────────────────────────────────────
-# 5. Main recommendation function
+# 5. Semantic similarity (sentence embeddings)
+# ─────────────────────────────────────────────
+def compute_semantic_scores(
+    jd_text: str,
+    model,
+    all_embeddings: np.ndarray,
+) -> np.ndarray:
+    """
+    Encode the JD and compute cosine similarity against all pre-computed
+    resume embeddings. Returns a 1-D array of scores (0–1) aligned with
+    the rows of all_embeddings.
+
+    Because embeddings are unit-normalised, dot product == cosine similarity.
+    """
+    jd_vec = model.encode([jd_text], normalize_embeddings=True)
+    return (all_embeddings @ jd_vec.T).flatten()
+
+
+# ─────────────────────────────────────────────
+# 6. Main recommendation function
 # ─────────────────────────────────────────────
 def generate_explanation(matched: list, missing: list, score: float) -> str:
     matched_str = ", ".join(matched[:3]) if matched else None
@@ -221,41 +244,67 @@ def generate_explanation(matched: list, missing: list, score: float) -> str:
         return "Match based on title and experience alignment"
 
 
-def recommend_candidates(job_description: str, candidates_df: pd.DataFrame, top_n: int = 5) -> list:
+def recommend_candidates(
+    job_description: str,
+    candidates_df: pd.DataFrame,
+    top_n: int = 5,
+    model=None,
+    embeddings: np.ndarray = None,
+    embedding_ids: np.ndarray = None,
+    precomputed_entities: list = None,
+    job_entities: dict = None,
+) -> list:
     """
-    Given a job description and candidate dataframe, return top N ranked candidates.
+    Rank candidates against a job description.
 
-    candidates_df must have columns: ID, clean_resume, Category, similarity_score
-    Returns list of dicts sorted by match score descending.
+    candidates_df columns: id, cleaned_text, category
+    model / embeddings / embedding_ids: sentence-transformer model and
+        pre-computed embeddings from precompute_embeddings.py (optional —
+        falls back to NER-only scoring if not provided).
+    precomputed_entities: list of entity dicts aligned with candidates_df rows,
+        pre-computed at startup to avoid per-query spaCy overhead.
+    job_entities: pre-extracted entities for the JD; extracted here if not provided.
+
+    Returns list of dicts sorted by total_score descending.
     """
-    job_entities = extract_entities(job_description)
+    if job_entities is None:
+        job_entities = extract_entities(job_description)
+
+    # Pre-compute semantic scores for all candidates in one batch
+    if model is not None and embeddings is not None and embedding_ids is not None:
+        sem_scores_all = compute_semantic_scores(job_description, model, embeddings)
+        # Build id → semantic_score lookup
+        sem_lookup = {int(eid): float(s) for eid, s in zip(embedding_ids, sem_scores_all)}
+    else:
+        sem_lookup = {}
+
     results = []
-
-    for _, row in candidates_df.iterrows():
-        candidate_entities = extract_entities(str(row["clean_resume"]))
+    for i, (_, row) in enumerate(candidates_df.iterrows()):
+        candidate_entities = precomputed_entities[i] if precomputed_entities is not None else extract_entities(str(row["cleaned_text"]))
         scores = compute_match_score(job_entities, candidate_entities)
 
-        # Matched and missing skills for display
         job_skills = set(s.lower() for s in job_entities.get("SKILL", []))
         candidate_skills = set(s.lower() for s in candidate_entities.get("SKILL", []))
         matched_skills = list(job_skills & candidate_skills)
         missing_skills = list(job_skills - candidate_skills)
 
-        # Blend NER score with existing similarity score from notebook (50/50)
-        notebook_score = float(row.get("similarity_score", 0)) * 100
-        blended_score = round((scores["total_score"] + notebook_score) / 2, 1)
+        # Semantic score for this candidate (0–100), 0 if embeddings unavailable
+        sem_score = sem_lookup.get(int(row["id"]), 0.0) * 100
+
+        # Final blend: 50% keyword NER + 50% semantic embedding
+        blended_score = round((scores["total_score"] * 0.5) + (sem_score * 0.5), 1)
 
         explanation = generate_explanation(matched_skills, missing_skills, blended_score)
 
         results.append({
-            "id": row["ID"],
-            "name": row.get('name', 'Unknown'),
-            "category": row.get("Category", "Unknown"),
+            "id": row["id"],
+            "name": row.get("name", "Candidate"),
+            "category": row.get("category", "Unknown"),
             "total_score": blended_score,
             "skill_score": scores["skill_score"],
             "title_score": scores["title_score"],
             "experience_score": scores["experience_score"],
-            "similarity_score": round(notebook_score, 1),
+            "semantic_score": round(sem_score, 1),
             "matched_skills": matched_skills,
             "missing_skills": missing_skills,
             "explanation": explanation,

@@ -180,13 +180,24 @@ def batch_extract_entities(texts: list) -> list:
 # ─────────────────────────────────────────────
 # 4. Candidate matching function
 # ─────────────────────────────────────────────
-def compute_match_score(job_entities: dict, candidate_entities: dict) -> dict:
+def compute_match_score(
+    job_entities: dict,
+    candidate_entities: dict,
+    skill_w: float = 0.6,
+    title_w: float = 0.25,
+    exp_w: float = 0.15,
+) -> dict:
     """
     Compute a match score between a job description and a candidate profile.
     Returns score (0-100) and breakdown by entity type.
+    Weights are auto-normalized so they always sum to 1.0.
     """
+    total_w = skill_w + title_w + exp_w
+    if total_w > 0:
+        skill_w, title_w, exp_w = skill_w / total_w, title_w / total_w, exp_w / total_w
+
+    weights = {"SKILL": skill_w, "JOB_TITLE": title_w, "EXPERIENCE": exp_w}
     scores = {}
-    weights = {"SKILL": 0.6, "JOB_TITLE": 0.25, "EXPERIENCE": 0.15}
 
     for entity_type, weight in weights.items():
         job_set = set(job_entities.get(entity_type, []))
@@ -253,6 +264,11 @@ def recommend_candidates(
     embedding_ids: np.ndarray = None,
     precomputed_entities: list = None,
     job_entities: dict = None,
+    ner_weight: float = 0.5,
+    sem_weight: float = 0.5,
+    skill_w: float = 0.6,
+    title_w: float = 0.25,
+    exp_w: float = 0.15,
 ) -> list:
     """
     Rank candidates against a job description.
@@ -264,16 +280,22 @@ def recommend_candidates(
     precomputed_entities: list of entity dicts aligned with candidates_df rows,
         pre-computed at startup to avoid per-query spaCy overhead.
     job_entities: pre-extracted entities for the JD; extracted here if not provided.
+    ner_weight / sem_weight: blending weights (auto-normalized).
+    skill_w / title_w / exp_w: NER sub-weights (auto-normalized).
 
     Returns list of dicts sorted by total_score descending.
     """
     if job_entities is None:
         job_entities = extract_entities(job_description)
 
+    # Normalize blend weights
+    blend_total = ner_weight + sem_weight
+    if blend_total > 0:
+        ner_weight, sem_weight = ner_weight / blend_total, sem_weight / blend_total
+
     # Pre-compute semantic scores for all candidates in one batch
     if model is not None and embeddings is not None and embedding_ids is not None:
         sem_scores_all = compute_semantic_scores(job_description, model, embeddings)
-        # Build id → semantic_score lookup
         sem_lookup = {int(eid): float(s) for eid, s in zip(embedding_ids, sem_scores_all)}
     else:
         sem_lookup = {}
@@ -281,18 +303,15 @@ def recommend_candidates(
     results = []
     for i, (_, row) in enumerate(candidates_df.iterrows()):
         candidate_entities = precomputed_entities[i] if precomputed_entities is not None else extract_entities(str(row["cleaned_text"]))
-        scores = compute_match_score(job_entities, candidate_entities)
+        scores = compute_match_score(job_entities, candidate_entities, skill_w, title_w, exp_w)
 
         job_skills = set(s.lower() for s in job_entities.get("SKILL", []))
         candidate_skills = set(s.lower() for s in candidate_entities.get("SKILL", []))
         matched_skills = list(job_skills & candidate_skills)
         missing_skills = list(job_skills - candidate_skills)
 
-        # Semantic score for this candidate (0–100), 0 if embeddings unavailable
         sem_score = sem_lookup.get(int(row["id"]), 0.0) * 100
-
-        # Final blend: 50% keyword NER + 50% semantic embedding
-        blended_score = round((scores["total_score"] * 0.5) + (sem_score * 0.5), 1)
+        blended_score = round((scores["total_score"] * ner_weight) + (sem_score * sem_weight), 1)
 
         explanation = generate_explanation(matched_skills, missing_skills, blended_score)
 
@@ -315,3 +334,28 @@ def recommend_candidates(
 
     results.sort(key=lambda x: x["total_score"], reverse=True)
     return results[:top_n]
+
+
+def compute_skill_gap(job_entities: dict, candidate_entities_cache: list) -> dict:
+    """
+    For each required skill in the JD, count how many candidates in the full pool
+    have it vs. are missing it.
+    Returns: { skill: { "have": int, "missing": int, "pct_have": float } }
+    """
+    job_skills = [s.lower() for s in job_entities.get("SKILL", [])]
+    total = len(candidate_entities_cache)
+    if not job_skills or total == 0:
+        return {}
+
+    result = {}
+    for skill in job_skills:
+        have = sum(
+            1 for ents in candidate_entities_cache
+            if skill in [s.lower() for s in ents.get("SKILL", [])]
+        )
+        result[skill] = {
+            "have": have,
+            "missing": total - have,
+            "pct_have": round((have / total) * 100, 1),
+        }
+    return result

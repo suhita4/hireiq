@@ -19,7 +19,7 @@ import numpy as np
 import pickle
 import os
 from pathlib import Path
-from ner_pipeline import recommend_candidates, extract_entities, batch_extract_entities
+from ner_pipeline import recommend_candidates, extract_entities, batch_extract_entities, compute_skill_gap
 
 app = Flask(__name__)
 
@@ -110,6 +110,13 @@ def recommend():
     # Extract entities once — reused for both display and scoring
     job_entities = extract_entities(job_description)
 
+    # Optional weight overrides from client
+    ner_weight = float(data.get("ner_weight", 0.5))
+    sem_weight = float(data.get("sem_weight", 0.5))
+    skill_w    = float(data.get("skill_w", 0.6))
+    title_w    = float(data.get("title_w", 0.25))
+    exp_w      = float(data.get("exp_w", 0.15))
+
     results = recommend_candidates(
         job_description,
         candidates_df,
@@ -119,14 +126,92 @@ def recommend():
         embedding_ids=embedding_ids,
         precomputed_entities=candidate_entities_cache,
         job_entities=job_entities,
+        ner_weight=ner_weight,
+        sem_weight=sem_weight,
+        skill_w=skill_w,
+        title_w=title_w,
+        exp_w=exp_w,
     )
 
     return jsonify({
         "job_entities": job_entities,
         "candidates": results,
-        "total_candidates_searched": len(candidates_df),  # full 2,814
+        "total_candidates_searched": len(candidates_df),
         "semantic_scoring_enabled": st_model is not None,
     })
+
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    """
+    POST /analyze
+    Body (JSON): { "job_description": "..." }
+    Returns skill gap data across the full candidate pool.
+    """
+    data = request.get_json()
+    if not data or not data.get("job_description"):
+        return jsonify({"error": "job_description is required"}), 400
+
+    job_description = data["job_description"].strip()
+    if len(job_description) < 20:
+        return jsonify({"error": "Please provide a more detailed job description."}), 400
+
+    job_entities = extract_entities(job_description)
+    skill_gap = compute_skill_gap(job_entities, candidate_entities_cache)
+
+    avg_coverage = (
+        round(sum(v["pct_have"] for v in skill_gap.values()) / len(skill_gap), 1)
+        if skill_gap else 0
+    )
+
+    return jsonify({
+        "skill_gap": skill_gap,
+        "avg_coverage": avg_coverage,
+        "total_candidates": len(candidates_df),
+    })
+
+
+FUNNEL_PATH = DATA_DIR / "funnel.json"
+FUNNEL_STAGES = ["Screened", "Interview Scheduled", "Offered", "Hired", "Rejected"]
+
+
+def _load_funnel() -> dict:
+    if FUNNEL_PATH.exists():
+        with open(FUNNEL_PATH) as f:
+            return json.load(f)
+    return {}
+
+
+def _save_funnel(data: dict) -> None:
+    with open(FUNNEL_PATH, "w") as f:
+        json.dump(data, f)
+
+
+@app.route("/funnel", methods=["GET"])
+def funnel_get():
+    """GET /funnel — returns { candidate_id: stage } mapping."""
+    return jsonify(_load_funnel())
+
+
+@app.route("/funnel/update", methods=["POST"])
+def funnel_update():
+    """POST /funnel/update — body: { "id": 42, "stage": "Offered" }"""
+    data = request.get_json()
+    if not data or "id" not in data or "stage" not in data:
+        return jsonify({"error": "id and stage are required"}), 400
+
+    stage = data["stage"]
+    if stage not in FUNNEL_STAGES and stage != "":
+        return jsonify({"error": f"Invalid stage. Must be one of: {FUNNEL_STAGES}"}), 400
+
+    funnel = _load_funnel()
+    cid = str(data["id"])
+    if stage == "":
+        funnel.pop(cid, None)
+    else:
+        funnel[cid] = stage
+    _save_funnel(funnel)
+    return jsonify({"ok": True})
 
 
 @app.route("/health")

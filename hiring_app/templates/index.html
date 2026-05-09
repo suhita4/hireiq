@@ -3,1112 +3,145 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HireIQ — AI Candidate Matching</title>
+  <title>HireIQ — Candidate Matching</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_v }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0d0f14;
-      --surface: #13161e;
-      --surface2: #1a1e28;
-      --border: #252a38;
-      --accent: #4f8ef7;
-      --accent2: #7c5cfc;
-      --green: #2dd4a0;
-      --yellow: #f5c842;
-      --red: #ef4444;
-      --text: #e8eaf0;
-      --muted: #6b7280;
-      --radius: 12px;
-    }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(79,142,247,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 90% 80%, rgba(124,92,252,0.08) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .container {
-      position: relative;
-      z-index: 1;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    /* ── Header ── */
-    header {
-      padding: 40px 0 32px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 48px;
-    }
-
-    .header-inner { display: flex; align-items: center; gap: 16px; }
-
-    .logo-mark {
-      width: 44px; height: 44px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px;
-      color: white; flex-shrink: 0;
-    }
-
-    .logo-text { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
-    .logo-text span { color: var(--accent); }
-
-    .header-badge {
-      margin-left: auto;
-      background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.25);
-      color: var(--accent); font-size: 12px; font-weight: 500;
-      padding: 4px 12px; border-radius: 999px;
-    }
-
-    /* ── Layout ── */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      align-items: start;
-    }
-
-    @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
-
-    /* ── Card ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-    }
-
-    .card-label {
-      font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px;
-    }
-
-    .card-title {
-      font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
-      color: var(--text); margin-bottom: 20px;
-    }
-
-    /* ── Form ── */
-    textarea {
-      width: 100%;
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
-      line-height: 1.7; padding: 16px; resize: vertical; min-height: 220px;
-      transition: border-color 0.2s; outline: none;
-    }
-    textarea:focus { border-color: var(--accent); }
-    textarea::placeholder { color: var(--muted); }
-
-    .form-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
-
-    select {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
-      padding: 8px 12px; outline: none; cursor: pointer;
-    }
-
-    .btn {
-      margin-left: auto;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white; border: none; border-radius: 8px; padding: 10px 24px;
-      font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: opacity 0.2s, transform 0.15s;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-    /* ── Entities panel ── */
-    #entities-panel { display: none; margin-top: 24px; }
-    .entity-group { margin-bottom: 14px; }
-    .entity-group-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    .entity-group-label.skill { color: var(--accent); }
-    .entity-group-label.title { color: var(--accent2); }
-    .entity-group-label.exp { color: var(--green); }
-    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .tag { font-size: 12px; padding: 3px 10px; border-radius: 999px; font-weight: 500; }
-    .tag.skill   { background: rgba(79,142,247,0.12); color: var(--accent); border: 1px solid rgba(79,142,247,0.2); }
-    .tag.title   { background: rgba(124,92,252,0.12); color: var(--accent2); border: 1px solid rgba(124,92,252,0.2); }
-    .tag.exp     { background: rgba(45,212,160,0.12); color: var(--green); border: 1px solid rgba(45,212,160,0.2); }
-    .tag.empty   { color: var(--muted); font-style: italic; background: none; border: none; font-size: 13px; }
-    .tag.missing { background: rgba(220,53,69,0.08); color: #c0392b; border: 1px solid rgba(220,53,69,0.25); }
-    .explanation { font-size: 0.82rem; color: var(--muted); font-style: italic; margin-top: 4px; }
-
-    /* ── Results ── */
-    #results-panel { display: none; }
-
-    .results-header {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
-    }
-
-    .results-count { font-size: 13px; color: var(--muted); }
-
-    .candidate-card {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 20px; margin-bottom: 20px; transition: border-color 0.2s;
-      animation: slideIn 0.3s ease both;
-    }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .candidate-card:hover { border-color: rgba(79,142,247,0.3); }
-    .candidate-card.selected-for-compare { border-color: var(--accent); background: rgba(79,142,247,0.05); }
-
-    .candidate-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
-
-    .compare-checkbox {
-      width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
-      accent-color: var(--accent); margin-top: 8px;
-    }
-
-    .rank-badge {
-      width: 32px; height: 32px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; flex-shrink: 0;
-    }
-    .rank-badge.rank-1 { background: rgba(245,200,66,0.15); color: var(--yellow); }
-    .rank-badge.rank-2 { background: rgba(79,142,247,0.12); color: var(--accent); }
-    .rank-badge.rank-3 { background: rgba(124,92,252,0.12); color: var(--accent2); }
-    .rank-badge.rank-other { background: var(--surface); color: var(--muted); }
-
-    .candidate-info { flex: 1; min-width: 0; }
-    .candidate-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
-
-    .score-pill {
-      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
-      padding: 4px 14px; border-radius: 999px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white; white-space: nowrap;
-    }
-
-    .score-bars { margin-bottom: 12px; }
-    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .bar-label { font-size: 11px; color: var(--muted); min-width: 70px; flex-shrink: 0; }
-    .bar-track { flex: 1; height: 5px; background: var(--border); border-radius: 999px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
-    .bar-fill.skill { background: var(--accent); }
-    .bar-fill.title { background: var(--accent2); }
-    .bar-fill.exp   { background: var(--green); }
-    .bar-val { font-size: 11px; color: var(--muted); width: 32px; text-align: right; flex-shrink: 0; }
-    .matched-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
-
-    /* Funnel stage selector on candidate card */
-    .funnel-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .funnel-row-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-    .funnel-select { font-size: 12px; padding: 4px 8px; flex: 1; }
-
-    /* ── States ── */
-    .loading { text-align: center; padding: 48px 0; color: var(--muted); display: none; }
-    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .error-msg { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #f87171; border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-top: 12px; display: none; }
-    .empty-state { text-align: center; padding: 48px 0; color: var(--muted); }
-    .empty-state svg { margin-bottom: 12px; opacity: 0.5; }
-    .divider { height: 1px; background: var(--border); margin: 16px 0; }
-
-    /* ── Ghost / secondary buttons ── */
-    .btn-ghost {
-      background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.25);
-      color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px;
-      padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s;
-    }
-    .btn-ghost:hover { background: rgba(79,142,247,0.18); }
-
-    /* ── Top-N control group ── */
-    .top-n-control {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 14px; margin-top: 16px;
-    }
-    .top-n-control-label { font-size: 13px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
-    .top-n-control select { border: 1px solid var(--accent); background: var(--surface); flex-shrink: 0; }
-    .top-n-hint { font-size: 12px; color: var(--muted); flex: 1; text-align: right; white-space: nowrap; }
-
-    .btn-full { width: 100%; justify-content: center; margin-top: 12px; }
-
-    .step-circle {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: rgba(79,142,247,0.15); color: var(--accent);
-      font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 800;
-      margin-right: 6px; flex-shrink: 0; vertical-align: middle;
-    }
-
-    .card-label-row { display: flex; align-items: center; margin-bottom: 8px; }
-
-    /* ── Scoring weights card ── */
-    #scoring-info { display: none; margin-bottom: 20px; }
-    .scoring-card .card-label { margin-bottom: 12px; }
-    .weight-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .weight-name { font-size: 12px; color: var(--text); min-width: 80px; flex-shrink: 0; }
-    .weight-track { flex: 1; height: 5px; background: var(--border); border-radius: 999px; overflow: hidden; }
-    .weight-fill { height: 100%; border-radius: 999px; }
-    .weight-fill.skill { background: var(--accent); }
-    .weight-fill.title { background: var(--accent2); }
-    .weight-fill.exp   { background: var(--green); }
-    .weight-pct { font-size: 12px; font-weight: 600; font-family: 'Syne', sans-serif; width: 34px; text-align: right; flex-shrink: 0; }
-    .weight-pct.skill { color: var(--accent); }
-    .weight-pct.title { color: var(--accent2); }
-    .weight-pct.exp   { color: var(--green); }
-    .weight-desc { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
-
-    /* ── Architecture diagram ── */
-    .arch-section { margin-bottom: 32px; }
-    .arch-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.2s; }
-    .arch-toggle:hover { border-color: rgba(79,142,247,0.35); }
-    .arch-toggle-label { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--muted); flex: 1; }
-    .arch-toggle-icon { font-size: 11px; color: var(--muted); transition: transform 0.25s; }
-    .arch-toggle-icon.open { transform: rotate(180deg); }
-    .arch-body { display: none; background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 24px 28px; }
-    .arch-body.open { display: block; }
-    .arch-pipeline { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
-    .arch-node { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .arch-node-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text); text-align: center; white-space: nowrap; }
-    .arch-node-box.highlight { border-color: rgba(79,142,247,0.4); background: rgba(79,142,247,0.07); color: var(--accent); }
-    .arch-node-sub { font-size: 10px; color: var(--muted); text-align: center; }
-    .arch-arrow { font-size: 16px; color: var(--muted); padding: 0 6px; margin-bottom: 18px; flex-shrink: 0; }
-    .arch-weights { display: flex; justify-content: center; gap: 24px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
-    .arch-weight-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
-    .arch-weight-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-    /* ── Threshold sensitivity sliders ── */
-    .sliders-section {
-      margin-top: 16px;
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
-    }
-    .sliders-header {
-      display: flex; align-items: center; justify-content: space-between; cursor: pointer;
-      user-select: none; margin-bottom: 0;
-    }
-    .sliders-header-label { font-size: 13px; color: var(--muted); font-weight: 500; }
-    .sliders-body { display: none; margin-top: 14px; }
-    .sliders-body.open { display: block; }
-    .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .slider-row-label { font-size: 12px; color: var(--text); min-width: 90px; flex-shrink: 0; }
-    .slider-row input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-    .slider-val { font-size: 12px; font-weight: 600; font-family: 'Syne', sans-serif; color: var(--accent); width: 36px; text-align: right; flex-shrink: 0; }
-    .slider-divider { font-size: 11px; color: var(--muted); margin: 10px 0 6px; font-weight: 600; letter-spacing: 0.5px; }
-    .slider-hint { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
-    .btn-resmatch { margin-top: 10px; font-size: 12px; padding: 7px 16px; }
-
-    /* ── Compare panel ── */
-    #compare-btn-wrap { display: none; margin-bottom: 12px; }
-    .btn-compare {
-      background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.3);
-      color: var(--accent2); font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
-      padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: background 0.2s;
-    }
-    .btn-compare:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-compare:not(:disabled):hover { background: rgba(124,92,252,0.22); }
-
-    #compare-panel { display: none; margin-top: 20px; }
-    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .compare-col { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
-    .compare-col-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
-
-    /* ── Analysis tabs (Skill Gap / Benchmark / Funnel) ── */
-    #analysis-section { display: none; margin-top: 32px; padding-bottom: 48px; }
-    .analysis-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-    .tab-btn {
-      background: none; border: none; border-bottom: 2px solid transparent;
-      color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 14px;
-      padding: 10px 18px; cursor: pointer; transition: color 0.2s, border-color 0.2s;
-      margin-bottom: -1px;
-    }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-btn:hover:not(.active) { color: var(--text); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* Skill gap chart container */
-    .chart-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
-    .chart-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .chart-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
-
-    /* Benchmark table */
-    .benchmark-summary-bar {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-      padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px;
-    }
-    .bm-metric { text-align: center; }
-    .bm-metric-val { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
-    .bm-metric-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .bm-warning { flex: 1; font-size: 12px; color: var(--yellow); background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.2); border-radius: 6px; padding: 8px 12px; display: none; }
-
-    .bm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .bm-table th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
-    .bm-table td { padding: 10px 12px; border-bottom: 1px solid rgba(37,42,56,0.6); }
-    .bm-table tr:last-child td { border-bottom: none; }
-    .status-pill { font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
-    .status-easy   { background: rgba(45,212,160,0.12); color: var(--green); border: 1px solid rgba(45,212,160,0.2); }
-    .status-moderate { background: rgba(245,200,66,0.12); color: var(--yellow); border: 1px solid rgba(245,200,66,0.2); }
-    .status-hard   { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-
-    /* Funnel kanban */
-    .funnel-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-    @media (max-width: 900px) { .funnel-board { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 600px) { .funnel-board { grid-template-columns: 1fr 1fr; } }
-    .funnel-col { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-    .funnel-col-header { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-    .funnel-col-count { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: 11px; padding: 1px 8px; color: var(--muted); }
-    .funnel-candidate { font-size: 12px; padding: 6px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; color: var(--text); }
-    .funnel-empty { font-size: 11px; color: var(--muted); font-style: italic; }
-  </style>
 </head>
 <body>
-  <div class="container">
+  <div class="app">
 
-    <header>
-      <div class="header-inner">
-        <div class="logo-mark">H</div>
-        <div class="logo-text">Hire<span>IQ</span></div>
-        <div class="header-badge">spaCy NER · Sentence Transformers</div>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">H</span>
+        <span>Hire<span>IQ</span></span>
       </div>
+
+      <div class="role-switcher" title="Active role">
+        <input id="role-name-input" class="role-name" type="text" aria-label="Active role name" placeholder="Role name" spellcheck="false">
+        <button class="icon-btn role-caret" id="role-switch-btn" title="Switch role" aria-label="Switch role" aria-haspopup="listbox" aria-expanded="false">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <select id="role-select" class="visually-hidden" aria-hidden="true" tabindex="-1"></select>
+        <div class="role-popover" id="role-popover" role="listbox" aria-label="Roles" hidden></div>
+        <button class="icon-btn" id="new-role-btn" title="New role" aria-label="New role">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="icon-btn danger" id="delete-role-btn" title="Delete role" aria-label="Delete role">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m3 0V5a2 2 0 012-2h4a2 2 0 012 2v2M4 7h16"/></svg>
+        </button>
+      </div>
+
+      <div class="topbar-spacer"></div>
+
+      <div class="funnel-summary" id="funnel-summary"></div>
+
+      <button class="icon-btn" id="help-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 17h.01"/></svg>
+      </button>
     </header>
 
-    <!-- Architecture diagram (collapsible) -->
-    <div class="arch-section">
-      <div class="arch-toggle" onclick="toggleArch(this)">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/><path stroke-linecap="round" d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-        </svg>
-        <span class="arch-toggle-label">How it works</span>
-        <span class="arch-toggle-icon" id="arch-icon">▼</span>
-      </div>
-      <div class="arch-body" id="arch-body">
-        <div class="arch-pipeline">
-          <div class="arch-node">
-            <div class="arch-node-box">Job Description</div>
-            <div class="arch-node-sub">Plain text input</div>
-          </div>
-          <div class="arch-arrow">→</div>
-          <div class="arch-node">
-            <div class="arch-node-box highlight">Flask API</div>
-            <div class="arch-node-sub">POST /recommend</div>
-          </div>
-          <div class="arch-arrow">→</div>
-          <div class="arch-node">
-            <div class="arch-node-box highlight">NER Extraction</div>
-            <div class="arch-node-sub">spaCy entity recognition</div>
-          </div>
-          <div class="arch-arrow">→</div>
-          <div class="arch-node">
-            <div class="arch-node-box highlight">Semantic Scoring</div>
-            <div class="arch-node-sub">NER + BERT Embeddings</div>
-          </div>
-          <div class="arch-arrow">→</div>
-          <div class="arch-node">
-            <div class="arch-node-box highlight">Blended Ranking</div>
-            <div class="arch-node-sub">Weighted total score</div>
-          </div>
-          <div class="arch-arrow">→</div>
-          <div class="arch-node">
-            <div class="arch-node-box">UI Results</div>
-            <div class="arch-node-sub">Ranked candidates</div>
-          </div>
+    <!-- Main grid -->
+    <div class="main">
+
+      <!-- JD pane -->
+      <section class="pane jd-pane">
+        <div class="pane-header">
+          <span>Job Description</span>
         </div>
-        <div class="arch-weights">
-          <div class="arch-weight-item">
-            <div class="arch-weight-dot" style="background: var(--accent)"></div>
-            NER keyword score — <strong style="color:var(--accent)">50%</strong>
-          </div>
-          <div class="arch-weight-item">
-            <div class="arch-weight-dot" style="background: var(--accent2)"></div>
-            Semantic embedding — <strong style="color:var(--accent2)">50%</strong>
-          </div>
-          <div class="arch-weight-item">
-            <div class="arch-weight-dot" style="background: var(--muted)"></div>
-            NER split: Skills 60% · Title 25% · Exp 15%
-          </div>
+        <div id="jd-pane-body" class="jd-pane-body"></div>
+      </section>
+
+      <!-- Candidates pane -->
+      <section class="pane candidates-pane">
+        <div class="pane-header">
+          <span>Candidates</span>
         </div>
-      </div>
-    </div>
+        <div class="filter-bar" id="filter-bar">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="in_funnel">In funnel</button>
+          <button class="chip" data-filter="Hired">Hired</button>
+          <button class="chip" data-filter="Rejected">Rejected</button>
+        </div>
+        <div id="candidate-list" class="candidate-list"></div>
+        <div class="compare-bar" id="compare-bar" style="display:none;">
+          <span id="compare-bar-count">0/2 selected</span>
+          <button class="btn" id="compare-bar-btn" disabled>Compare</button>
+        </div>
+      </section>
 
-    <div class="main-grid">
-
-      <!-- LEFT: Input + Extracted Entities -->
-      <div>
-        <div class="card">
-          <div class="card-label-row">
-            <span class="step-circle">1</span>
-            <div class="card-label" style="margin-bottom:0">Step 1</div>
-          </div>
-          <div class="card-title">Enter Job Description</div>
-
-          <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
-            <button onclick="autofill()" class="btn-ghost">✦ Randomize</button>
-          </div>
-          <textarea id="job-input" placeholder="Paste the job description here, or click Randomize above."></textarea>
-
-          <div id="error-msg" class="error-msg"></div>
-
-          <div class="top-n-control">
-            <span class="top-n-control-label">Show top N candidates</span>
-            <select id="top-n">
-              <option value="3">3</option>
-              <option value="5" selected>5</option>
-              <option value="10">10</option>
-            </select>
-            <span class="top-n-hint">from the candidate pool</span>
-          </div>
-
-          <!-- Threshold Sensitivity Sliders -->
-          <div class="sliders-section">
-            <div class="sliders-header" onclick="toggleSliders()">
-              <span class="sliders-header-label">⚖️ Scoring Weight Tuner</span>
-              <span id="sliders-icon" style="font-size:11px;color:var(--muted)">▼</span>
-            </div>
-            <div class="sliders-body" id="sliders-body">
-              <div class="slider-divider">BLEND</div>
-              <div class="slider-row">
-                <span class="slider-row-label">NER Keywords</span>
-                <input type="range" id="sl-ner" min="0" max="100" value="50" oninput="onBlendChange(this)">
-                <span class="slider-val" id="sv-ner">50%</span>
-              </div>
-              <div class="slider-row">
-                <span class="slider-row-label">Semantic (BERT)</span>
-                <input type="range" id="sl-sem" min="0" max="100" value="50" disabled style="opacity:0.5">
-                <span class="slider-val" id="sv-sem">50%</span>
-              </div>
-              <div class="slider-divider">NER SUB-WEIGHTS</div>
-              <div class="slider-row">
-                <span class="slider-row-label">Skills</span>
-                <input type="range" id="sl-skill" min="1" max="100" value="60" oninput="onSubWeightChange()">
-                <span class="slider-val" id="sv-skill">60%</span>
-              </div>
-              <div class="slider-row">
-                <span class="slider-row-label">Job Title</span>
-                <input type="range" id="sl-title" min="1" max="100" value="25" oninput="onSubWeightChange()">
-                <span class="slider-val" id="sv-title">25%</span>
-              </div>
-              <div class="slider-row">
-                <span class="slider-row-label">Experience</span>
-                <input type="range" id="sl-exp" min="1" max="100" value="15" oninput="onSubWeightChange()">
-                <span class="slider-val" id="sv-exp">15%</span>
-              </div>
-              <div class="slider-hint">Sub-weights are auto-normalized. Change then re-match to see ranking shift.</div>
-              <button class="btn btn-resmatch" id="resmatch-btn" onclick="runMatch()" disabled>↺ Re-match with weights</button>
-            </div>
-          </div>
-
-          <button class="btn btn-full" id="match-btn" onclick="runMatch()">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            Match Candidates
+      <!-- Detail pane -->
+      <section class="pane detail-pane">
+        <div class="pane-header">
+          <span>Candidate</span>
+          <button class="icon-btn" id="detail-close-btn" title="Close" aria-label="Close candidate detail">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
+        <div id="detail-body" class="detail-body"></div>
+      </section>
 
-        <!-- Extracted Entities from JD -->
-        <div id="entities-panel" class="card" style="margin-top:20px;">
-          <div class="card-label">Extracted from Job Description</div>
-          <div class="card-title" style="margin-bottom:16px;">Detected Entities (NER Output)</div>
-          <div class="entity-group">
-            <div class="entity-group-label skill">Skills</div>
-            <div class="tags" id="jd-skills"></div>
-          </div>
-          <div class="divider"></div>
-          <div class="entity-group">
-            <div class="entity-group-label title">Job Titles</div>
-            <div class="tags" id="jd-titles"></div>
-          </div>
-          <div class="divider"></div>
-          <div class="entity-group">
-            <div class="entity-group-label exp">Experience</div>
-            <div class="tags" id="jd-experience"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: Results -->
-      <div>
-        <div class="loading" id="loading">
-          <div class="spinner"></div>
-          <div>Running NER + semantic scoring...</div>
-        </div>
-
-        <!-- Scoring weights — shown with results -->
-        <div id="scoring-info" class="card scoring-card">
-          <div class="card-label">Scoring Weights</div>
-          <div class="weight-row">
-            <span class="weight-name">NER keyword</span>
-            <div class="weight-track"><div class="weight-fill skill" style="width:50%"></div></div>
-            <span class="weight-pct skill">50%</span>
-          </div>
-          <div class="weight-row">
-            <span class="weight-name">Semantic (BERT)</span>
-            <div class="weight-track"><div class="weight-fill title" style="width:50%"></div></div>
-            <span class="weight-pct title">50%</span>
-          </div>
-          <div class="weight-desc">Final score = 50% NER keyword match (skills 60%, title 25%, exp 15%) + 50% semantic similarity via sentence-transformers (all-MiniLM-L6-v2). Semantic scoring catches synonyms and contextually related terms that exact keyword matching misses.</div>
-        </div>
-
-        <div id="results-panel" class="card">
-          <div class="results-header">
-            <div>
-              <div class="card-label-row">
-                <span class="step-circle">2</span>
-                <div class="card-label" style="margin-bottom:0">Step 2 — Results</div>
-              </div>
-              <div class="card-title" style="margin-bottom:0">Ranked Candidates</div>
-            </div>
-            <div class="results-count" id="results-count"></div>
-          </div>
-
-          <!-- Compare button -->
-          <div id="compare-btn-wrap">
-            <button class="btn-compare" id="compare-btn" disabled onclick="showCompare()">
-              Compare Selected (0/2)
-            </button>
-          </div>
-
-          <div id="candidates-list"></div>
-
-          <!-- Comparison panel -->
-          <div id="compare-panel">
-            <div class="divider"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">Side-by-Side Comparison</span>
-              <button class="btn-ghost" onclick="closeCompare()">✕ Close</button>
-            </div>
-            <div class="compare-grid" id="compare-grid"></div>
-          </div>
-        </div>
-
-        <!-- Empty state (shown before any search) -->
-        <div class="card empty-state" id="empty-state">
-          <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          <p style="font-size:15px; color: var(--muted);">Results will appear here after matching</p>
-        </div>
-      </div>
-
-    </div><!-- end grid -->
-
-    <!-- ── Analysis Section (full width, below grid) ── -->
-    <div id="analysis-section">
-      <div class="analysis-tabs">
-        <button class="tab-btn active" onclick="switchTab('skillgap')">Skill Gap Heatmap</button>
-        <button class="tab-btn" onclick="switchTab('benchmark')">Benchmark Mode</button>
-        <button class="tab-btn" onclick="switchTab('funnel')">Hiring Funnel</button>
-      </div>
-
-      <!-- Skill Gap Tab -->
-      <div class="tab-panel active" id="tab-skillgap">
-        <div class="chart-container">
-          <div class="chart-title">Skill Coverage Across Candidate Pool</div>
-          <div class="chart-subtitle">How many candidates in the full pool have each required skill</div>
-          <div id="skillgap-loading" style="text-align:center;padding:32px;color:var(--muted);">Loading analysis...</div>
-          <canvas id="skillgap-chart" style="display:none;max-height:400px;"></canvas>
-        </div>
-      </div>
-
-      <!-- Benchmark Tab -->
-      <div class="tab-panel" id="tab-benchmark">
-        <div class="benchmark-summary-bar">
-          <div class="bm-metric">
-            <div class="bm-metric-val" id="bm-avg-coverage" style="color:var(--accent)">—</div>
-            <div class="bm-metric-label">Avg Pool Coverage</div>
-          </div>
-          <div class="bm-metric">
-            <div class="bm-metric-val" id="bm-hard-count" style="color:var(--red)">—</div>
-            <div class="bm-metric-label">Hard-to-find Skills</div>
-          </div>
-          <div class="bm-warning" id="bm-warning">
-            ⚠️ Some required skills are very rare in the candidate pool. Consider relaxing those requirements.
-          </div>
-        </div>
-        <div class="chart-container">
-          <table class="bm-table" id="bm-table">
-            <thead>
-              <tr>
-                <th>Skill</th>
-                <th>Candidates With It</th>
-                <th>Pool Coverage</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="bm-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Funnel Tab -->
-      <div class="tab-panel" id="tab-funnel">
-        <div class="funnel-board" id="funnel-board">
-          <!-- Populated by renderFunnelBoard() -->
-        </div>
-      </div>
     </div>
 
-  </div><!-- end container -->
+    <!-- Drawer: skill coverage + funnel -->
+    <aside class="drawer collapsed" id="drawer">
+      <div class="drawer-toggle" id="drawer-toggle">
+        <span class="drawer-title">Pool insights</span>
+        <div class="drawer-tabs" onclick="event.stopPropagation()">
+          <button class="drawer-tab active" data-tab="coverage">Skill Coverage</button>
+          <button class="drawer-tab" data-tab="funnel">Funnel</button>
+        </div>
+        <div class="drawer-spacer"></div>
+        <span class="drawer-chevron">▲</span>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-panel active" data-tab="coverage">
+          <div id="coverage-blurb" class="coverage-blurb">Save a JD to see skill coverage across the candidate pool.</div>
+          <div class="chart-wrap"><canvas id="coverage-canvas"></canvas></div>
+        </div>
+        <div class="drawer-panel" data-tab="funnel">
+          <div class="funnel-board" id="funnel-board"></div>
+        </div>
+      </div>
+    </aside>
 
-  <script>
-    // ─── Global state ───────────────────────────────────────────────────
-    let lastCandidates = [];
-    let selectedForCompare = new Set();
-    let funnelData = {};
-    let skillGapData = {};
-    let skillGapChart = null;
+  </div>
 
-    // ─── Architecture toggle ─────────────────────────────────────────────
-    function toggleArch(btn) {
-      const body = document.getElementById('arch-body');
-      const icon = document.getElementById('arch-icon');
-      const open = body.classList.toggle('open');
-      icon.classList.toggle('open', open);
-    }
+  <!-- Compare modal -->
+  <div class="compare-overlay" id="compare-overlay" role="dialog" aria-modal="true" aria-labelledby="compare-title">
+    <div class="compare-modal">
+      <div class="compare-modal-head">
+        <h2 id="compare-title">Side-by-side comparison</h2>
+        <button class="icon-btn" id="compare-modal-close" aria-label="Close">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="compare-grid" id="compare-grid"></div>
+    </div>
+  </div>
 
-    // ─── Slider: blend ───────────────────────────────────────────────────
-    function onBlendChange(slider) {
-      const ner = parseInt(slider.value);
-      const sem = 100 - ner;
-      document.getElementById('sv-ner').textContent = ner + '%';
-      document.getElementById('sv-sem').textContent = sem + '%';
-    }
+  <!-- Help modal -->
+  <div class="help-overlay" id="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="help-modal">
+      <div class="compare-modal-head" style="margin-bottom:10px">
+        <h2 id="help-title">Keyboard shortcuts</h2>
+        <button class="icon-btn" id="help-modal-close" aria-label="Close">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="help-row"><span>Move selection up / down</span><span><kbd>k</kbd> <kbd>j</kbd></span></div>
+      <div class="help-row"><span>Set funnel stage</span><span><kbd>1</kbd>–<kbd>5</kbd></span></div>
+      <div class="help-row"><span>Clear funnel stage</span><span><kbd>0</kbd></span></div>
+      <div class="help-row"><span>Save JD</span><span><kbd>Ctrl</kbd>+<kbd>Enter</kbd></span></div>
+      <div class="help-row"><span>Show this help</span><span><kbd>?</kbd></span></div>
+      <div class="help-row"><span>Close any overlay</span><span><kbd>Esc</kbd></span></div>
+    </div>
+  </div>
 
-    // ─── Slider: sub-weights (display only, normalized by backend) ───────
-    function onSubWeightChange() {
-      const s = parseInt(document.getElementById('sl-skill').value);
-      const t = parseInt(document.getElementById('sl-title').value);
-      const e = parseInt(document.getElementById('sl-exp').value);
-      const total = s + t + e;
-      document.getElementById('sv-skill').textContent = Math.round((s/total)*100) + '%';
-      document.getElementById('sv-title').textContent = Math.round((t/total)*100) + '%';
-      document.getElementById('sv-exp').textContent   = Math.round((e/total)*100) + '%';
-    }
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    function toggleSliders() {
-      const body = document.getElementById('sliders-body');
-      const icon = document.getElementById('sliders-icon');
-      const open = body.classList.toggle('open');
-      icon.textContent = open ? '▲' : '▼';
-    }
-
-    function getWeights() {
-      const nerRaw = parseInt(document.getElementById('sl-ner').value);
-      const semRaw = 100 - nerRaw;
-      return {
-        ner_weight: nerRaw / 100,
-        sem_weight: semRaw / 100,
-        skill_w: parseInt(document.getElementById('sl-skill').value),
-        title_w: parseInt(document.getElementById('sl-title').value),
-        exp_w:   parseInt(document.getElementById('sl-exp').value),
-      };
-    }
-
-    // ─── Main match ──────────────────────────────────────────────────────
-    async function runMatch() {
-      const jd = document.getElementById('job-input').value.trim();
-      const topN = parseInt(document.getElementById('top-n').value);
-      const btn = document.getElementById('match-btn');
-      const errorDiv = document.getElementById('error-msg');
-
-      errorDiv.style.display = 'none';
-      if (!jd) { showError("Please enter a job description before matching."); return; }
-
-      btn.disabled = true;
-      document.getElementById('resmatch-btn').disabled = true;
-      document.getElementById('loading').style.display = 'block';
-      document.getElementById('results-panel').style.display = 'none';
-      document.getElementById('scoring-info').style.display = 'none';
-      document.getElementById('entities-panel').style.display = 'none';
-      document.getElementById('empty-state').style.display = 'none';
-      document.getElementById('analysis-section').style.display = 'none';
-      selectedForCompare.clear();
-      document.getElementById('compare-panel').style.display = 'none';
-
-      try {
-        const weights = getWeights();
-        const [recRes, analyzeRes] = await Promise.all([
-          fetch('/recommend', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ job_description: jd, top_n: topN, ...weights })
-          }),
-          fetch('/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ job_description: jd })
-          }),
-        ]);
-
-        const data = await recRes.json();
-        if (!recRes.ok) { showError(data.error || "Something went wrong."); return; }
-
-        const analyzeData = analyzeRes.ok ? await analyzeRes.json() : null;
-
-        funnelData = await fetch('/funnel').then(r => r.json()).catch(() => ({}));
-
-        renderEntities(data.job_entities);
-        renderCandidates(data.candidates, data.total_candidates_searched);
-        lastCandidates = data.candidates;
-
-        if (analyzeData) {
-          skillGapData = analyzeData.skill_gap || {};
-          renderSkillGap(skillGapData, analyzeData.total_candidates);
-          renderBenchmark(skillGapData, analyzeData.avg_coverage);
-        }
-
-        renderFunnelBoard();
-        document.getElementById('analysis-section').style.display = 'block';
-        document.getElementById('resmatch-btn').disabled = false;
-
-      } catch (err) {
-        showError("Could not connect to the server. Make sure Flask is running.");
-      } finally {
-        btn.disabled = false;
-        document.getElementById('loading').style.display = 'none';
-      }
-    }
-
-    // ─── Render entities ─────────────────────────────────────────────────
-    function renderEntities(entities) {
-      document.getElementById('entities-panel').style.display = 'block';
-      renderTags('jd-skills',     entities.SKILL      || [], 'skill');
-      renderTags('jd-titles',     entities.JOB_TITLE  || [], 'title');
-      renderTags('jd-experience', entities.EXPERIENCE || [], 'exp');
-    }
-
-    function renderTags(containerId, items, type) {
-      const el = document.getElementById(containerId);
-      if (!items.length) { el.innerHTML = '<span class="tag empty">None detected</span>'; return; }
-      el.innerHTML = items.map(t => `<span class="tag ${type}">${t}</span>`).join('');
-    }
-
-    // ─── Render candidates ───────────────────────────────────────────────
-    function renderCandidates(candidates, total) {
-      document.getElementById('results-panel').style.display = 'block';
-      document.getElementById('scoring-info').style.display = 'block';
-      document.getElementById('results-count').textContent = `${candidates.length} of ${total} searched`;
-      document.getElementById('compare-btn-wrap').style.display = 'flex';
-      updateCompareBtn();
-
-      if (window.innerWidth <= 768) {
-        document.getElementById('results-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-
-      const list = document.getElementById('candidates-list');
-      if (!candidates.length) {
-        list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:24px 0">No candidates matched this job description.</p>';
-        return;
-      }
-
-      list.innerHTML = candidates.map((c, i) => {
-        const rank = i + 1;
-        const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
-        const skillPct    = Math.min((c.skill_score / 60) * 100, 100).toFixed(0);
-        const titlePct    = Math.min((c.title_score / 25) * 100, 100).toFixed(0);
-        const expPct      = Math.min((c.experience_score / 15) * 100, 100).toFixed(0);
-        const semanticPct = Math.min(c.semantic_score || 0, 100).toFixed(0);
-
-        const matchedSkillsHtml = c.matched_skills.length
-          ? c.matched_skills.map(s => `<span class="tag skill">${s}</span>`).join('')
-          : '<span class="tag empty">No skill overlap detected</span>';
-        const missingSkillsHtml = (c.missing_skills && c.missing_skills.length)
-          ? c.missing_skills.map(s => `<span class="tag missing">${s}</span>`).join('')
-          : '';
-        const missingSection = missingSkillsHtml
-          ? `<div class="matched-label" style="margin-top:8px">Missing Skills</div><div class="tags">${missingSkillsHtml}</div>`
-          : '';
-        const explanationHtml = c.explanation ? `<div class="explanation">${c.explanation}</div>` : '';
-
-        const currentStage = funnelData[String(c.id)] || '';
-        const stageOptions = ['', 'Screened', 'Interview Scheduled', 'Offered', 'Hired', 'Rejected']
-          .map(s => `<option value="${s}" ${s === currentStage ? 'selected' : ''}>${s || '— Not staged —'}</option>`)
-          .join('');
-
-        return `
-          <div class="candidate-card" id="card-${c.id}" style="animation-delay:${i * 0.07}s">
-            <div class="candidate-top">
-              <input type="checkbox" class="compare-checkbox" onchange="onCompareToggle(this, ${c.id})" title="Select for comparison">
-              <div class="rank-badge ${rankClass}">#${rank}</div>
-              <div class="candidate-info">
-                <div class="candidate-name">${c.name}</div>
-                ${explanationHtml}
-              </div>
-              <div class="score-pill">${c.total_score}%</div>
-            </div>
-            <div class="score-bars">
-              <div class="bar-row">
-                <span class="bar-label">Skills</span>
-                <div class="bar-track"><div class="bar-fill skill" style="width:${skillPct}%"></div></div>
-                <span class="bar-val">${c.skill_score}</span>
-              </div>
-              <div class="bar-row">
-                <span class="bar-label">Job Title</span>
-                <div class="bar-track"><div class="bar-fill title" style="width:${titlePct}%"></div></div>
-                <span class="bar-val">${c.title_score}</span>
-              </div>
-              <div class="bar-row">
-                <span class="bar-label">Experience</span>
-                <div class="bar-track"><div class="bar-fill exp" style="width:${expPct}%"></div></div>
-                <span class="bar-val">${c.experience_score}</span>
-              </div>
-              <div class="bar-row">
-                <span class="bar-label" style="color:var(--yellow)">Semantic</span>
-                <div class="bar-track"><div class="bar-fill" style="width:${semanticPct}%;background:var(--yellow)"></div></div>
-                <span class="bar-val">${(c.semantic_score || 0).toFixed(1)}</span>
-              </div>
-            </div>
-            <div class="matched-label">Matched Skills</div>
-            <div class="tags">${matchedSkillsHtml}</div>
-            ${missingSection}
-            <div class="funnel-row">
-              <span class="funnel-row-label">Funnel Stage</span>
-              <select class="funnel-select" onchange="updateFunnelStage(${c.id}, this.value)">
-                ${stageOptions}
-              </select>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // ─── Comparison ──────────────────────────────────────────────────────
-    function onCompareToggle(checkbox, id) {
-      if (checkbox.checked) {
-        if (selectedForCompare.size >= 2) { checkbox.checked = false; return; }
-        selectedForCompare.add(id);
-        document.getElementById('card-' + id).classList.add('selected-for-compare');
-      } else {
-        selectedForCompare.delete(id);
-        document.getElementById('card-' + id).classList.remove('selected-for-compare');
-      }
-      updateCompareBtn();
-    }
-
-    function updateCompareBtn() {
-      const btn = document.getElementById('compare-btn');
-      const n = selectedForCompare.size;
-      btn.textContent = `Compare Selected (${n}/2)`;
-      btn.disabled = n !== 2;
-    }
-
-    function showCompare() {
-      const ids = [...selectedForCompare];
-      const candidates = ids.map(id => lastCandidates.find(c => c.id === id)).filter(Boolean);
-      if (candidates.length !== 2) return;
-
-      document.getElementById('compare-grid').innerHTML = candidates.map(c => {
-        const skillPct    = Math.min((c.skill_score / 60) * 100, 100).toFixed(0);
-        const titlePct    = Math.min((c.title_score / 25) * 100, 100).toFixed(0);
-        const expPct      = Math.min((c.experience_score / 15) * 100, 100).toFixed(0);
-        const semanticPct = Math.min(c.semantic_score || 0, 100).toFixed(0);
-        const matchedHtml = c.matched_skills.map(s => `<span class="tag skill">${s}</span>`).join('') || '<span class="tag empty">None</span>';
-        const missingHtml = (c.missing_skills || []).map(s => `<span class="tag missing">${s}</span>`).join('') || '<span class="tag empty">None</span>';
-        return `
-          <div class="compare-col">
-            <div class="compare-col-name">
-              <span>${c.name}</span>
-              <span class="score-pill" style="font-size:13px">${c.total_score}%</span>
-            </div>
-            <div class="score-bars">
-              <div class="bar-row"><span class="bar-label">Skills</span><div class="bar-track"><div class="bar-fill skill" style="width:${skillPct}%"></div></div><span class="bar-val">${c.skill_score}</span></div>
-              <div class="bar-row"><span class="bar-label">Job Title</span><div class="bar-track"><div class="bar-fill title" style="width:${titlePct}%"></div></div><span class="bar-val">${c.title_score}</span></div>
-              <div class="bar-row"><span class="bar-label">Experience</span><div class="bar-track"><div class="bar-fill exp" style="width:${expPct}%"></div></div><span class="bar-val">${c.experience_score}</span></div>
-              <div class="bar-row"><span class="bar-label" style="color:var(--yellow)">Semantic</span><div class="bar-track"><div class="bar-fill" style="width:${semanticPct}%;background:var(--yellow)"></div></div><span class="bar-val">${(c.semantic_score||0).toFixed(1)}</span></div>
-            </div>
-            <div class="matched-label">Matched Skills</div>
-            <div class="tags" style="margin-bottom:8px">${matchedHtml}</div>
-            <div class="matched-label">Missing Skills</div>
-            <div class="tags" style="margin-bottom:8px">${missingHtml}</div>
-            ${c.explanation ? `<div class="explanation">${c.explanation}</div>` : ''}
-          </div>
-        `;
-      }).join('');
-
-      document.getElementById('compare-panel').style.display = 'block';
-      document.getElementById('compare-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    function closeCompare() {
-      document.getElementById('compare-panel').style.display = 'none';
-    }
-
-    // ─── Skill Gap Heatmap ───────────────────────────────────────────────
-    function renderSkillGap(skillGap, total) {
-      const loadingEl = document.getElementById('skillgap-loading');
-      const canvas = document.getElementById('skillgap-chart');
-      const entries = Object.entries(skillGap).sort((a, b) => a[1].pct_have - b[1].pct_have);
-
-      if (!entries.length) {
-        loadingEl.textContent = 'No skill data available for this job description.';
-        return;
-      }
-
-      loadingEl.style.display = 'none';
-      canvas.style.display = 'block';
-
-      const labels = entries.map(([skill]) => skill);
-      const values = entries.map(([, d]) => d.pct_have);
-      const colors = values.map(v => v >= 60 ? 'rgba(45,212,160,0.7)' : v >= 30 ? 'rgba(245,200,66,0.7)' : 'rgba(239,68,68,0.7)');
-
-      if (skillGapChart) skillGapChart.destroy();
-      skillGapChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: '% of pool with skill',
-            data: values,
-            backgroundColor: colors,
-            borderColor: colors.map(c => c.replace('0.7', '1')),
-            borderWidth: 1,
-            borderRadius: 4,
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  const [skill, d] = entries[ctx.dataIndex];
-                  return ` ${d.pct_have}% (${d.have} of ${total} candidates)`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              min: 0, max: 100,
-              ticks: { color: '#6b7280', callback: v => v + '%' },
-              grid: { color: 'rgba(37,42,56,0.8)' }
-            },
-            y: { ticks: { color: '#e8eaf0', font: { size: 12 } }, grid: { display: false } }
-          }
-        }
-      });
-    }
-
-    // ─── Benchmark Mode ──────────────────────────────────────────────────
-    function renderBenchmark(skillGap, avgCoverage) {
-      document.getElementById('bm-avg-coverage').textContent = avgCoverage + '%';
-      const entries = Object.entries(skillGap).sort((a, b) => a[1].pct_have - b[1].pct_have);
-      const hardCount = entries.filter(([, d]) => d.pct_have < 20).length;
-      document.getElementById('bm-hard-count').textContent = hardCount;
-
-      if (hardCount > 0) document.getElementById('bm-warning').style.display = 'block';
-
-      document.getElementById('bm-tbody').innerHTML = entries.map(([skill, d]) => {
-        let statusClass, statusLabel;
-        if (d.pct_have >= 60)      { statusClass = 'status-easy';     statusLabel = 'Easy to find'; }
-        else if (d.pct_have >= 30) { statusClass = 'status-moderate';  statusLabel = 'Moderate'; }
-        else                       { statusClass = 'status-hard';     statusLabel = 'Hard to find'; }
-
-        return `
-          <tr>
-            <td>${skill}</td>
-            <td style="color:var(--muted)">${d.have.toLocaleString()} candidates</td>
-            <td>
-              <div style="display:flex;align-items:center;gap:8px">
-                <div style="flex:1;height:4px;background:var(--border);border-radius:999px;overflow:hidden">
-                  <div style="width:${d.pct_have}%;height:100%;background:${d.pct_have>=60?'var(--green)':d.pct_have>=30?'var(--yellow)':'var(--red)'};border-radius:999px"></div>
-                </div>
-                <span style="font-size:12px;font-weight:600;width:36px;text-align:right">${d.pct_have}%</span>
-              </div>
-            </td>
-            <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // ─── Funnel Tracker ──────────────────────────────────────────────────
-    async function updateFunnelStage(id, stage) {
-      await fetch('/funnel/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, stage })
-      });
-      if (stage) funnelData[String(id)] = stage;
-      else delete funnelData[String(id)];
-      renderFunnelBoard();
-    }
-
-    function renderFunnelBoard() {
-      const stages = ['Screened', 'Interview Scheduled', 'Offered', 'Hired', 'Rejected'];
-      const board = document.getElementById('funnel-board');
-      board.innerHTML = stages.map(stage => {
-        const stageCandidates = lastCandidates.filter(c => funnelData[String(c.id)] === stage);
-        const items = stageCandidates.length
-          ? stageCandidates.map(c => `<div class="funnel-candidate">${c.name}</div>`).join('')
-          : '<div class="funnel-empty">No candidates</div>';
-        const stageColor = stage === 'Hired' ? 'var(--green)' : stage === 'Rejected' ? 'var(--red)' : stage === 'Offered' ? 'var(--yellow)' : 'var(--accent)';
-        return `
-          <div class="funnel-col">
-            <div class="funnel-col-header">
-              <span style="color:${stageColor}">${stage}</span>
-              <span class="funnel-col-count">${stageCandidates.length}</span>
-            </div>
-            ${items}
-          </div>
-        `;
-      }).join('');
-    }
-
-    // ─── Tab switching ───────────────────────────────────────────────────
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-        const tabs = ['skillgap', 'benchmark', 'funnel'];
-        btn.classList.toggle('active', tabs[i] === tabId);
-      });
-      document.querySelectorAll('.tab-panel').forEach(panel => {
-        panel.classList.toggle('active', panel.id === 'tab-' + tabId);
-      });
-    }
-
-    // ─── Helpers ─────────────────────────────────────────────────────────
-    function showError(msg) {
-      const el = document.getElementById('error-msg');
-      el.textContent = msg;
-      el.style.display = 'block';
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('empty-state').style.display = 'block';
-    }
-
-    function autofill() {
-      const samples = [
-        "We are hiring a Data Scientist with 3+ years of experience in machine learning and statistical modeling. Must be proficient in Python, scikit-learn, pandas, and numpy. Experience with TensorFlow or PyTorch is a strong plus. The role involves building classification and regression models, performing feature engineering, and presenting insights to non-technical stakeholders. Master's or PhD in a quantitative field preferred.",
-        "Looking for a Senior Java Developer with 5+ years of experience building enterprise-grade applications. Strong knowledge of Spring Boot, REST APIs, and SQL databases required. Experience with microservices architecture, Docker, and Jenkins is expected. The candidate should be comfortable with agile methodologies and code reviews. Bachelor's degree in Computer Science or related field.",
-        "We need an experienced HR Manager with 7+ years in talent acquisition, onboarding, payroll, and employee relations. The role requires strong knowledge of HRIS systems, performance management processes, and labour compliance. Excellent communication and leadership skills are essential. Experience managing a team of HR specialists is preferred.",
-        "Hiring a qualified Accountant with 4+ years of experience in financial reporting, auditing, and taxation. Proficiency in Tally, QuickBooks, and Excel is required. Knowledge of budgeting, forecasting, and investment analysis is a plus. CPA or equivalent certification preferred.",
-        "Seeking a DevOps Engineer with 4+ years of experience in AWS, Docker, Kubernetes, and CI/CD pipelines. The candidate should be proficient in Terraform, Ansible, and Jenkins. Strong scripting skills in Bash or Python are required. Experience with Linux systems administration, networking, and monitoring tools is expected.",
-        "Hiring a Python Developer with 3+ years of experience in backend development. Proficiency in Flask or Django, REST APIs, and SQL/NoSQL databases is required. Experience with pandas, numpy, and data pipelines is a strong advantage.",
-        "We are looking for a QA Engineer with 3+ years of experience in automation and manual testing. Proficiency in Selenium, pytest, and TestNG is required. The role involves writing test plans, executing regression tests, and reporting bugs via Jira.",
-        "Seeking a Network Security Engineer with 4+ years of experience in firewall management, DNS configuration, and network monitoring. Knowledge of TCP/IP, VPNs, and intrusion detection systems is required. CCNA or CompTIA Security+ certification preferred.",
-        "Hiring a Web Designer with 3+ years of experience in UI/UX design and front-end development. Proficiency in Figma, HTML, CSS, and Bootstrap is required. Knowledge of JavaScript and responsive design principles is expected.",
-        "Hiring a Blockchain Developer with 3+ years of experience in smart contract development and decentralized applications. Proficiency in Solidity, Ethereum, and Web3.js is required.",
-      ];
-      document.getElementById('job-input').value = samples[Math.floor(Math.random() * samples.length)];
-    }
-
-    document.getElementById('job-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) runMatch();
-    });
-  </script>
+  <script src="{{ url_for('static', filename='app.js') }}?v={{ js_v }}"></script>
 </body>
 </html>
